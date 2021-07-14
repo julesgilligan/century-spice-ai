@@ -1,0 +1,41 @@
+Here is some Prolog code. Can easily show which are possible.
+Writing declarative prolog code is interesting and powerful,
+but hard to debug. 
+
+Doing 'playable' needs play state which seems hard
+
+card([],[1,1,1]).
+card([],[1,1]).
+card([3,3],[4,4]).
+card([2,2,2],[3,3,3]).
+card([1,1],[2,2]).
+card([4],[1,2,3]).
+
+get([],0).   
+
+get(X,D) :-
+    card(C, R),
+    intersection(R, X, O),
+    O \= [],
+    subtract(X,R,Rem),
+    mergelist(C, Rem, Next),
+    get(Next, Down),
+    D is 1 + Down.
+
+intersection([], _, []).
+intersection([Head|L1tail], L2, L3) :-
+        memberchk(Head, L2),
+        !,
+        L3 = [Head|L3tail],
+        intersection(L1tail, L2, L3tail).
+intersection([_|L1tail], L2, L3) :-
+        intersection(L1tail, L2, L3).
+
+mergelist([],[],[]).
+mergelist(X,[],X).
+mergelist([],Y,Y).
+mergelist([X|List1],[Y|List2],[X|List]) :-
+    X =< Y,!,
+    mergelist(List1,[Y|List2],List).
+mergelist([X|List1],[Y|List2],[Y|List]) :-
+    mergelist([X|List1],List2,List).
