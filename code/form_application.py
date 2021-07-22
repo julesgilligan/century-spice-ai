@@ -1,15 +1,15 @@
-from package.SpiceAI import play_card
-from package.structures import Action, ActionType
+from .package.SpiceAI import play_card
+from .package.structures import Action, ActionType
 import re
 from dataclasses import dataclass, field
 
 import npyscreen
 import curses
 
-import program
-from package import GameState, MerchantCard, Path, Player, PointCard
-from package.rules import RULES as R
-from ui import read_merchant_card, read_point_card
+from . import program
+from .package import GameState, MerchantCard, Path, Player, PointCard
+from .package.rules import RULES as R
+from .ui import read_merchant_card, read_point_card
 
 
 class MyTestApp(npyscreen.NPSAppManaged):

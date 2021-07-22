@@ -1,11 +1,11 @@
-from itertools import combinations_with_replacement
-from package.SpiceAI import double_astar
+
+from code.package.SpiceAI import double_astar
 import random
-
-from package import (DFS, GameState, MCs_from_file, MerchantCard,
+import os
+from code.package import (DFS, GameState, MCs_from_file, MerchantCard,
                      PCs_from_file, forward_astar)
-from package.structures import Player, PointCard
-
+from code.package.structures import Player, PointCard
+from code import random_game
 
 def prof():
     import cProfile
@@ -23,42 +23,17 @@ def prof():
     p.sort_stats('time').print_callers(3)
     
 def tokenize_game(gs:GameState, p:Player):
-        # Use pickle for general serializing. .compress for NN input layers
-        # import pickle
+    # Use pickle for general serializing. .compress for NN input layers
+    # import pickle
 
-        path = forward_astar(gs.point_list, p.hand, p.caravan, MCs = gs.merchant_list)
-        return gs.compress() + p.compress() + str(len(path))
-    
-def random_caravan():
-    lst =     [1]* random.choices( [1,2,3,4], weights = [10,30,40,20] )[0]
-    lst.extend( [2]* random.choices( [0,1,2], weights = [50,40,10] )[0])
-    lst.extend( [3]* random.choices( [0,1,2], weights = [80,15, 5] )[0])
-    lst.extend( [4]* random.choices( [0,1,2], weights = [90, 8, 2] )[0])
-    return lst
-
-def random_game(select_mcs, select_pcs, hand_size):
-    # Playing Random Games
-    hand_size = 5
-    mList = random.sample(select_mcs, 6+hand_size-2)
-    pList = random.sample(select_pcs, 5)
-    gs = GameState(mList[:6], pList)
-    hand = mList[6:]
-    hand.append(MerchantCard([],[1,1]))
-    hand.append(MerchantCard([],[5,5]))
-    random.shuffle(hand)
-    caravan = random_caravan()
-    p = Player(caravan,hand)
-    return gs, p
-
-def random_upgrade():
-    effective_cards = [MerchantCard([1],[2]), MerchantCard([2],[3]), MerchantCard([3],[4])]
-    return random.choice(effective_cards)
+    path = forward_astar(gs.point_list, p.hand, p.caravan, MCs = gs.merchant_list)
+    return gs.compress() + p.compress() + str(len(path))
 
 def playground():
-
-    with open('package/MerchantCards.txt') as f:
+    curr_dir = os.path.dirname(__file__)
+    with open(os.path.join(curr_dir, 'code/package/MerchantCards.txt')) as f:
         mcs = MCs_from_file(f)
-    with open('package/PointCards.txt') as f:
+    with open(os.path.join(curr_dir, 'code/package/PointCards.txt')) as f:
         pcs = PCs_from_file(f)
     
     gs, p = random_game(mcs[3:], pcs, hand_size= 5)

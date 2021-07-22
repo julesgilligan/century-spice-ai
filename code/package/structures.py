@@ -54,6 +54,7 @@ class PointCard():
         return str(self.worth) + "\t" + ' '.join(map(str, self.cost))
     
     def compress(self):
+        """Length 5: 1 worth, 4 cost"""
         string = str(hex(self['worth']-6).split('x')[-1])
         string+= str(self['cost'].count(1)) + str(self['cost'].count(2))
         string+= str(self['cost'].count(3)) + str(self['cost'].count(4))
@@ -130,6 +131,7 @@ class MerchantCard():
         return  ' '.join(map(str, self['cost'])) + '->' + ' '.join(map(str, self['reward']))
     
     def compress(self):
+        """Length 9: 4 cost, 4 reward, 1 playable"""
         string = str(self['cost'].count(1)) + str(self['cost'].count(2))
         string+= str(self['cost'].count(3)) + str(self['cost'].count(4))
         string+= str(self['reward'].count(1)) + str(self['reward'].count(2))
@@ -329,6 +331,9 @@ class GameState():
     gold: int = 8
 
     def compress(self):
+        """Length 79:\n
+        6 Merchant Cards, 9 length each (0-53)\n
+        5 Point Cards, 5 length each (54-78)"""
         string = ''.join(mc.compress() for mc in self.merchant_list)
         if len(self.merchant_list) < 6:
             string += (6 - len(self.merchant_list))*COMPLENG_M*'0'
@@ -347,7 +352,7 @@ class Player():
     point_count: int = 0
 
     def compress(self, hand_size = 4):
-        # str(hex(self.caravan.count(1)).split('x')[-1])
+        """Length default 40: 4 caravan + 9*hand_size (0-39)"""
         string = str(hex(self.caravan.count(1)).split('x')[-1])
         string+= str(hex(self.caravan.count(2)).split('x')[-1])
         string+= str(hex(self.caravan.count(3)).split('x')[-1])
