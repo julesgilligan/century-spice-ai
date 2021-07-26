@@ -18,16 +18,14 @@ def run_game(PCs, hand, resources, MCs):
     MCs = [x for x in MCs if isinstance(x, MerchantCard)]
 
     path = DFS(PCs, hand, resources, MCs)
-    with open("logger.txt", 'w') as f:
-        for i in path:
-            f.write(str(i))
+    path = double_astar(PCs, hand, resources, MCs)
     return path
     
 def double_astar(pc_list, hand, caravan, MCs = None, max_depth = 8):
-    good, result = forward_astar(pc_list, hand, caravan, MCs = MCs, max_depth = max_depth)
+    result = forward_astar(pc_list, hand, caravan, MCs = MCs, max_depth = max_depth)
     if len(result) < max_depth:
-        good, result = forward_astar(pc_list, hand, caravan, MCs = MCs, max_depth = (max_depth - len(result)), start_path = result)
-    return good, result
+        result = forward_astar(pc_list, hand, caravan, MCs = MCs, max_depth = (max_depth - len(result)), start_path = result)
+    return result
 
 def forward_astar(pc_list, hand, caravan, **kwargs):
     """
@@ -51,7 +49,8 @@ def forward_astar(pc_list, hand, caravan, **kwargs):
         # Action: Score
         ts = try_score(currentNode)
         if ts != []:
-            return goodness(ts[0]), ts[0].path # try_score sorts highest value first
+            # return goodness(ts[0]), ts[0].path # try_score sorts highest value first
+            return ts[0].path
 
         # Action: Play
         # Generate child nodes from valid card plays
@@ -63,7 +62,8 @@ def forward_astar(pc_list, hand, caravan, **kwargs):
             children.extend(try_buy(currentNode, MCs))
         for child in children:
             pursue_if_better(child, found, frontier)
-    return goodness(Node(caravan, start_path, hand, pc_list)), start_path
+    # return goodness(Node(caravan, start_path, hand, pc_list)), start_path
+    return start_path
 
 ### DFS, RECURSIVE, w/o COPY
 
@@ -83,7 +83,8 @@ def DFS(pc_list, hand, caravan, MCs = None, max_depth = 8) -> Path:
     # print("DFS count (all nodes):", node_count[0])
     # print("tree (explored nodes)",tree[::-1], sum(tree))
     # print("Goodness: ", goodness(result))
-    return goodness(result), result.path
+    # return goodness(result), result.path
+    return result.path
 
 def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
     """
