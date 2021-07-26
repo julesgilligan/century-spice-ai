@@ -1,15 +1,14 @@
-from .package.SpiceAI import play_card
-from .package.structures import Action, ActionType
+from century.source.SpiceAI import play_card, run_game
+from century.source.structures import Action, ActionType
 import re
 from dataclasses import dataclass, field
 
 import npyscreen
 import curses
 
-from . import program
-from .package import GameState, MerchantCard, Path, Player, PointCard
-from .package.rules import RULES as R
-from .ui import read_merchant_card, read_point_card
+from century.source.structures import GameState, MerchantCard, Path, Player, PointCard
+from century.source.rules import RULES as R
+from century.source.helpers import read_merchant_card, read_point_card
 
 
 class MyTestApp(npyscreen.NPSAppManaged):
@@ -261,7 +260,7 @@ class Game():
     path: list[str] = field(default_factory=lambda: [])
 
     def play(self):
-        self.path = program.run_game(
+        self.path = run_game(
             self.gs.point_list, 
             self.ai.hand, 
             self.ai.caravan, 
@@ -317,10 +316,13 @@ def follow_action(action: Action , game: Game):
             game.ai.caravan.remove(cube)
         return
 
-if __name__ == '__main__':
+def run():
     try:
-        TA = MyTestApp().run()
+        MyTestApp().run()
     except (EOFError,KeyboardInterrupt) as e:
         print("\nGoodbye! Play again soon")
         exit(e)
+    
+if __name__ == '__main__':
+    run()   
     

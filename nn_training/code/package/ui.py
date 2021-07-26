@@ -2,10 +2,8 @@ import re
 
 from termcolor import colored
 
-from package import MerchantCard, PointCard, str_hand
-from package.structures import stringify_cubes
-from program import run_game
-
+from .structures import MerchantCard, PointCard, str_hand
+from .structures import stringify_cubes
 
 def command_line_ui():
     print(colored("Hello! Let's play Century Spice Road", "cyan", None, ["bold"]))

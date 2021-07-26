@@ -11,6 +11,18 @@ from queue import PriorityQueue
 
 from .structures import Action, ActionType, GameState, MerchantCard, Node, NodeMutable, Path, Player, PointCard
 
+def run_game(PCs, hand, resources, MCs):
+    PCs = [x for x in PCs if isinstance(x, PointCard)]
+    hand = [x for x in hand if isinstance(x, MerchantCard)]
+    resources = [x for x in resources if x in [1,2,3,4]]
+    MCs = [x for x in MCs if isinstance(x, MerchantCard)]
+
+    path = DFS(PCs, hand, resources, MCs)
+    with open("logger.txt", 'w') as f:
+        for i in path:
+            f.write(str(i))
+    return path
+    
 def double_astar(pc_list, hand, caravan, MCs = None, max_depth = 8):
     good, result = forward_astar(pc_list, hand, caravan, MCs = MCs, max_depth = max_depth)
     if len(result) < max_depth:

@@ -1,11 +1,9 @@
 
-from code.package.SpiceAI import double_astar
+from century.source.SpiceAI import double_astar, DFS, forward_astar
 import random
 import os
-from code.package import (DFS, GameState, MCs_from_file, MerchantCard,
-                     PCs_from_file, forward_astar)
-from code.package.structures import Player, PointCard
-from code import random_game
+from century.source.structures import Player, PointCard, GameState, MCs_from_file, MerchantCard, PCs_from_file
+from century.source.helpers import random_game
 
 def prof():
     import cProfile
@@ -31,9 +29,9 @@ def tokenize_game(gs:GameState, p:Player):
 
 def playground():
     curr_dir = os.path.dirname(__file__)
-    with open(os.path.join(curr_dir, 'code/package/MerchantCards.txt')) as f:
+    with open(os.path.join(curr_dir, 'century/resources/MerchantCards.txt')) as f:
         mcs = MCs_from_file(f)
-    with open(os.path.join(curr_dir, 'code/package/PointCards.txt')) as f:
+    with open(os.path.join(curr_dir, 'century/resources/PointCards.txt')) as f:
         pcs = PCs_from_file(f)
     
     gs, p = random_game(mcs[3:], pcs, hand_size= 5)

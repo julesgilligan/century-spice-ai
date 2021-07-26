@@ -6,9 +6,9 @@ from collections import Counter
 
 import pytest
 
-from package import ActionType, MerchantCard, PointCard
+from century.source.structures import ActionType, MerchantCard, PointCard
 
-from .SpiceAI import DFS, forward_astar, pay_pcs, play_card, play_upgrade
+from century.source.SpiceAI import DFS, forward_astar, pay_pcs, play_card, play_upgrade
 
 
 def test_play_card():
