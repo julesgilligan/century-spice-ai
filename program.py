@@ -1,5 +1,5 @@
 
-from century.source.SpiceAI import double_astar, DFS, forward_astar, game_search, play_upgrade, run_game, run_gamestate
+from century.source.SpiceAI import double_astar, DFS, forward_astar, game_search, goodness, play_upgrade, run_game, run_gamestate
 import random
 import os
 from century.source.structures import Player, PointCard, GameState, MCs_from_file, MerchantCard, PCs_from_file
@@ -13,12 +13,13 @@ def playground():
         pcs = PCs_from_file(f)
     
     for i in range(15):
-        random.seed(42)
+        random.seed(18)
         gs, p = random_game(mcs[3:], pcs, hand_size= 5)
         # print(p.hand[3])
-        # run_gamestate(gs, p)
-        game_search(gs, p)
+        path = run_gamestate(gs, p)
+        # path = game_search(gs, p)
         print(i)
+    print(path)
     
 def tokenize_game(gs:GameState, p:Player):
     # Use pickle for general serializing. .compress for NN input layers
@@ -89,7 +90,7 @@ def prof():
     profile = cProfile.Profile()
     profile.enable()
     
-    profile()
+    playground()
 
     #
     # End Doc Profiling code
@@ -101,8 +102,7 @@ def prof():
     
 if __name__ == '__main__':
     try:
-        from century.source.SpiceAI import head2head, combinations
-        playground()
+        prof()
     except (EOFError,KeyboardInterrupt) as e:
         print("\nGoodbye! Play again soon")
         exit(e)

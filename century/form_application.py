@@ -1,3 +1,4 @@
+from century.source.caravan_helpers import Caravan, remove_each
 import curses
 import re
 from dataclasses import dataclass, field
@@ -14,7 +15,7 @@ from century.source.SpiceAI import play_card, run_game
 class MyTestApp(npyscreen.NPSAppManaged):
     def onStart(self):
         self.game : Game = Game(GameState([],[]), 
-                                Player([1,1,1], Player.starting_hand()))
+                                Player(Caravan([1,1,1]), Player.starting_hand()))
         self.addForm("MAIN", DesktopForm, name="Small Form")
         self.addFormClass("RTRADE", ReplaceTrade, name="Replace Merchant Card")
         self.addFormClass("RPOINT", ReplacePoint, name="Replace Point Card")
@@ -140,7 +141,7 @@ class DesktopForm(npyscreen.FormBaseNewWithMenus):
         path = self.parentApp.game.path
 
         temp = path
-        if temp == None:
+        if temp == None or temp == [] or temp.head == None:
             return
         
         if temp.prev == None:
@@ -246,8 +247,8 @@ class ChangeCube(npyscreen.ActionForm):
         self.cubes = self.add(npyscreen.TitleText, name="Cubes", value = game.cube_string())
 
     def on_ok(self):
-        lst = self.parentApp.game.ai.caravan
-        lst[:] = [int(x) for x in re.findall('[1-4]{1}', self.cubes.value)[:R['caravan limit']]]
+        # lst = self.parentApp.game.ai.caravan
+        self.parentApp.game.ai.caravan = Caravan([int(x) for x in re.findall('[1-4]{1}', self.cubes.value)[:R['caravan limit']]])
         self.parentApp.switchFormPrevious()
     
     def on_cancel(self):
@@ -282,7 +283,7 @@ class Game():
                 for x in self.ai.hand]
 
     def cube_string(self):
-        return ''.join((str(x) for x in self.ai.caravan))
+        return ''.join((str(x) for x in self.ai.caravan.elements()))
 
     @staticmethod
     def path_string(p: Path):
@@ -304,7 +305,7 @@ def follow_action(action: Action, game: Game):
         if action.type == ActionType.PLAY:
             action.card.playable = True
             multi_plays = play_card(action.card, game.ai.caravan)
-            game.ai.caravan[:] = multi_plays[action.times - 1][1]
+            game.ai.caravan = multi_plays[action.times - 1][1]
 
         for card in game.ai.hand:
             if card == action.card:
@@ -312,8 +313,9 @@ def follow_action(action: Action, game: Game):
         return
 
     if action.type == ActionType.SCORE:
-        for cube in action.card.cost:
-            game.ai.caravan.remove(cube)
+        remove_each(game.ai.caravan, action.card.cost)
+        # for cube in action.card.cost:
+        #     game.ai.caravan.remove(cube)
         return
 
 def run():

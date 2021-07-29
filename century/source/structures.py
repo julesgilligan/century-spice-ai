@@ -4,6 +4,7 @@ Class structures and helpers for the AI.
 Node, MerchantCard, PointCard, Path, Action, etc.
 """
 
+from century.source.caravan_helpers import Caravan
 import copy
 from dataclasses import dataclass, field
 
@@ -163,7 +164,7 @@ class GameState():
 
 @dataclass
 class Player():
-    caravan: list[int]
+    caravan: Caravan
     hand: list[MerchantCard]
     score: int = 0
     point_count: int = 0

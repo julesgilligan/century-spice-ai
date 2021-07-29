@@ -1,7 +1,5 @@
-Caravan swap
 Hand swap
-get rid of global tree for tracking counts (better verbose)
-combine yield* and try*
+get rid of global tree for tracking counts (better verbose?)
 
  ##------------##
 ##  OPTIMIZE!!  ##

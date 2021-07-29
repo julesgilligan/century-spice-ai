@@ -174,6 +174,11 @@ class Node():
         '''A* heuristic for determining priority.'''
         play_bad = sum(1 for c in self.hand if not c['playable'])
         return 0 * play_bad
+    
+    def drop_last(self):
+        object.__setattr__(self, 'path', self.path.prev)
+        if self.path == None:
+            object.__setattr__(self, 'path', Path())
 
 class NodeMutable(Node):
     def new_with(self, path: Path, caravan = None, hand = None, pcs = None):
@@ -186,7 +191,3 @@ class NodeMutable(Node):
         object.__setattr__(self, 'path', self.path.add(path.head) )
         return self
     
-    def drop_last(self):
-        object.__setattr__(self, 'path', self.path.prev)
-        if self.path == None:
-            object.__setattr__(self, 'path', Path())

@@ -18,6 +18,8 @@ from .switch import Caravan, append_each, remove_each
 def run_game(PCs, hand, resources, MCs):
     PCs = [x for x in PCs if isinstance(x, PointCard)]
     hand = [x for x in hand if isinstance(x, MerchantCard)]
+    if isinstance(resources, Caravan):
+        resources = resources.elements()
     resources = [x for x in resources if x in [1,2,3,4]]
     MCs = [x for x in MCs if isinstance(x, MerchantCard)]
 
@@ -26,7 +28,7 @@ def run_game(PCs, hand, resources, MCs):
     return path
     
 def run_gamestate(gs: GameState, p: Player, max_depth=8):
-    double_astar(gs.point_list, p.hand, p.caravan, MCs= gs.merchant_list, max_depth= max_depth)
+    return double_astar(gs.point_list, p.hand, p.caravan, MCs= gs.merchant_list, max_depth= max_depth)
 
 def double_astar(pc_list, hand, cube_list, MCs = None, max_depth = 8):
     result = forward_astar(pc_list, hand, cube_list, MCs = MCs, max_depth = max_depth)
@@ -98,79 +100,79 @@ def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
     # Generator version of previous try_*()
     # These avoid copying by backtracing between returning neighbors  
 
-    def yield_score(curr:Node):
-        for pc in pay_pcs( sorted(curr.pcs, reverse=True), curr.goal):
-            if curr.path.already_scored(pc):
-                continue
-            child = curr.new_with(
-                path = curr.path.add(Action(ActionType.SCORE, pc))
-            )
-            remove_each(child.goal, pc['cost'])
-            yield child
-            append_each(child.goal, pc['cost'])
-            curr.drop_last()
-        return True
+    # def yield_score(curr:Node):
+    #     for pc in pay_pcs( sorted(curr.pcs, reverse=True), curr.goal):
+    #         if curr.path.already_scored(pc):
+    #             continue
+    #         child = curr.new_with(
+    #             path = curr.path.add(Action(ActionType.SCORE, pc))
+    #         )
+    #         remove_each(child.goal, pc['cost'])
+    #         yield child
+    #         append_each(child.goal, pc['cost'])
+    #         curr.drop_last()
+    #     return True
 
-    def yield_play(currentNode):
-        for i, card in enumerate(currentNode.hand):
-            multi_plays = play_card(card, currentNode.goal)
-            # If card can't be played, skip
-            if not multi_plays:
-                continue
-            old_cl = currentNode.goal.copy()
-            for num_play, cubes in multi_plays:
-                lst_of_lsts = gen_10_cubes(cubes)    
+    # def yield_play(currentNode):
+    #     for i, card in enumerate(currentNode.hand):
+    #         multi_plays = play_card(card, currentNode.goal)
+    #         # If card can't be played, skip
+    #         if not multi_plays:
+    #             continue
+    #         old_cl = currentNode.goal.copy()
+    #         for num_play, cubes in multi_plays:
+    #             lst_of_lsts = gen_10_cubes(cubes)    
                 
-                for cl in lst_of_lsts:
-                    child = currentNode.new_with(
-                        path = currentNode.path.add(Action(ActionType.PLAY, currentNode.hand[i], plays=num_play)),
-                        caravan = cl
-                    )
+    #             for cl in lst_of_lsts:
+    #                 child = currentNode.new_with(
+    #                     path = currentNode.path.add(Action(ActionType.PLAY, currentNode.hand[i], plays=num_play)),
+    #                     caravan = cl
+    #                 )
             
-                    old_play = child.hand[i]['playable']
-                    child.hand[i]['playable'] = False
-                    yield child
-                    child.hand[i]['playable'] = old_play
+    #                 old_play = child.hand[i]['playable']
+    #                 child.hand[i]['playable'] = False
+    #                 yield child
+    #                 child.hand[i]['playable'] = old_play
                     
-                    child.drop_last()
-            object.__setattr__(currentNode, 'goal', old_cl)
-        return True
+    #                 child.drop_last()
+    #         object.__setattr__(currentNode, 'goal', old_cl)
+    #     return True
 
-    def yield_reclaim(currentNode:Node):
-        if all( map(lambda card : card['playable'], currentNode.hand) ):
-            return False
+    # def yield_reclaim(currentNode:Node):
+    #     if all( map(lambda card : card['playable'], currentNode.hand) ):
+    #         return False
             
-        child = currentNode.new_with(
-            path = currentNode.path.add(Action(ActionType.RECLAIM))
-        )
-        old_playable = [card['playable'] for card in child.hand]
-        for card in child.hand:
-            card['playable'] = True
-        yield child 
-        for i, card in enumerate(child.hand):
-            card['playable'] = old_playable[i]
-        child.drop_last()
-        return True
+    #     child = currentNode.new_with(
+    #         path = currentNode.path.add(Action(ActionType.RECLAIM))
+    #     )
+    #     old_playable = [card['playable'] for card in child.hand]
+    #     for card in child.hand:
+    #         card['playable'] = True
+    #     yield child 
+    #     for i, card in enumerate(child.hand):
+    #         card['playable'] = old_playable[i]
+    #     child.drop_last()
+    #     return True
 
-    def yield_buy(currentNode: Node, MCs):
-        if MCs == None:
-            return False
-        for i in range(min( currentNode.goal.count(1),len(MCs))):
-            mc = MCs[i]
-            if mc in currentNode.hand:
-                continue
-            if currentNode.goal.pays_for(mc['cost']):
-                child = currentNode.new_with(
-                    path = currentNode.path.add(Action(ActionType.BUY, card = mc)),
-                    hand = currentNode.hand + [MCs[i]]
-                )
+    # def yield_buy(currentNode: Node, MCs):
+    #     if MCs == None:
+    #         return False
+    #     for i in range(min( currentNode.goal.count(1),len(MCs))):
+    #         mc = MCs[i]
+    #         if mc in currentNode.hand:
+    #             continue
+    #         if currentNode.goal.pays_for(mc['cost']):
+    #             child = currentNode.new_with(
+    #                 path = currentNode.path.add(Action(ActionType.BUY, card = mc)),
+    #                 hand = currentNode.hand + [MCs[i]]
+    #             )
 
-                remove_each(child.goal, [1]*i )
-                yield child
-                append_each(child.goal, [1]*i )
-                currentNode.hand.pop()
-                currentNode.drop_last()
-        return True
+    #             remove_each(child.goal, [1]*i )
+    #             yield child
+    #             append_each(child.goal, [1]*i )
+    #             child.hand.pop()
+    #             child.drop_last()
+    #     return True
 
     best_node = Node([], Path(), [], [])
 
@@ -190,8 +192,26 @@ def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
 ##
 ## Get neighbors from trying to SCORE
 ##
+def yield_score(curr:Node):
+    for pc in pay_pcs( sorted(curr.pcs, reverse=True), curr.goal):
+        if curr.path.already_scored(pc):
+            continue
+        child = curr.new_with(
+            path = curr.path.add(Action(ActionType.SCORE, pc))
+        )
+        remove_each(child.goal, pc['cost'])
+        yield child
+        append_each(child.goal, pc['cost'])
+        curr.drop_last()
+    return True
 
 def try_score(curr:Node):
+    lst = []
+    for child in yield_score(curr):
+        lst.append(child.new_with(child.path))
+    return lst
+
+def OGtry_score(curr:Node):
     child_list = []
     for pc in pay_pcs( sorted(curr.pcs, reverse=True), curr.goal):
         if curr.path.already_scored(pc):
@@ -222,7 +242,39 @@ def pay_pcs(pcs: list[PointCard], caravan) -> list[PointCard]:
 ## Get neighbors from trying to PLAY
 ##
 
+
+def yield_play(currentNode):
+    for i, card in enumerate(currentNode.hand):
+        multi_plays = play_card(card, currentNode.goal)
+        # If card can't be played, skip
+        if not multi_plays:
+            continue
+        old_cl = currentNode.goal.copy()
+        for num_play, cubes in multi_plays:
+            lst_of_lsts = gen_10_cubes(cubes)    
+            
+            for cl in lst_of_lsts:
+                child = currentNode.new_with(
+                    path = currentNode.path.add(Action(ActionType.PLAY, currentNode.hand[i], plays=num_play)),
+                    caravan = cl
+                )
+        
+                old_play = child.hand[i]['playable']
+                child.hand[i]['playable'] = False
+                yield child
+                child.hand[i]['playable'] = old_play
+                
+                child.drop_last()
+        object.__setattr__(currentNode, 'goal', old_cl)
+    return True
+
 def try_play(currentNode):
+    lst = []
+    for child in yield_play(currentNode):
+        lst.append(child.new_with(child.path))
+    return lst
+
+def OGtry_play(currentNode):
     child_list = []
     for i, card in enumerate(currentNode.hand):
         multi_plays = play_card(card, currentNode.goal)
@@ -308,7 +360,29 @@ def copy_to_child(parent : Node, index, new_cara, num_plays) -> Node:
 ## Get neighbors from trying to RECLAIM
 ##
 
+def yield_reclaim(currentNode:Node):
+    if all( map(lambda card : card['playable'], currentNode.hand) ):
+        return False
+        
+    child = currentNode.new_with(
+        path = currentNode.path.add(Action(ActionType.RECLAIM))
+    )
+    old_playable = [card['playable'] for card in child.hand]
+    for card in child.hand:
+        card['playable'] = True
+    yield child 
+    for i, card in enumerate(child.hand):
+        card['playable'] = old_playable[i]
+    child.drop_last()
+    return True
+
 def try_reclaim(currentNode:Node):
+    lst = []
+    for child in yield_reclaim(currentNode):
+        lst.append(child.new_with(child.path))
+    return lst
+
+def OGtry_reclaim(currentNode:Node):
     if all( map(lambda card : card['playable'], currentNode.hand) ):
         return []
           
@@ -323,7 +397,33 @@ def try_reclaim(currentNode:Node):
 ## Get neighbors from trying to BUY
 ##
 
+def yield_buy(currentNode: Node, MCs):
+    if MCs == None:
+        return False
+    for i in range(min( currentNode.goal.count(1),len(MCs))):
+        mc = MCs[i]
+        if mc in currentNode.hand:
+            continue
+        if currentNode.goal.pays_for(mc['cost']):
+            child = currentNode.new_with(
+                path = currentNode.path.add(Action(ActionType.BUY, card = mc)),
+                hand = currentNode.hand + [MCs[i]]
+            )
+
+            remove_each(child.goal, [1]*i )
+            yield child
+            append_each(child.goal, [1]*i )
+            child.hand.pop()
+            child.drop_last()
+    return True
+
 def try_buy(currentNode: Node, MCs):
+    lst = []
+    for child in yield_buy(currentNode, MCs):
+        lst.append(child.new_with(child.path))
+    return lst
+
+def OGtry_buy(currentNode: Node, MCs):
     children = []
     for i in range(min( currentNode.goal.count(1),len(MCs))):
         mc = MCs[i]

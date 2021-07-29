@@ -124,7 +124,6 @@ def test_forw_astar():
     ]
     path = forward_astar( [PointCard(0, [1,1]), PointCard(0, [1,2,3])], 
         HAND, [2] )
-    print(path)
     follow = follow_path(path, [2])
     assert check_pcs([PointCard(0, [1,1]), PointCard(0, [1,2,3])], follow)
     assert check_pcs([PointCard(0, [1,2,3])], follow)
