@@ -47,12 +47,17 @@ class Path():
     def __init__(self, a: Action = None, prev = None):
         self.head = a
         self.prev: Path = prev
+        self.score = 0
         if prev is None and a is None:
             self.len = 0
         elif prev is None:
             self.len = 1
         else:
             self.len = len(prev) + 1
+            self.score += prev.score
+
+        if a is not None and a.type == ActionType.SCORE:
+            self.score += a.card['worth']
     
     def __iter__(self):
         if self.len > 0:
@@ -119,13 +124,6 @@ class Path():
         if self.head is None:
             return Action(ActionType.RECLAIM)
         return self.head
-
-    def score(self):
-        val = 0
-        for a in self:
-            if a.type == ActionType.SCORE:
-                val += a.card.worth
-        return val
     
     def already_scored(self, card:PointCard):
         return any((a.card == card for a in self))
@@ -180,7 +178,6 @@ class Node():
 class NodeMutable(Node):
     def new_with(self, path: Path, caravan = None, hand = None, pcs = None):
         if caravan != None:
-            # assumes Caravan = caravan
             object.__setattr__(self, 'goal', caravan)
         if hand != None:
             object.__setattr__(self, 'hand', hand)

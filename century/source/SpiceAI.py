@@ -25,6 +25,9 @@ def run_game(PCs, hand, resources, MCs):
     path = DFS(PCs, hand, resources, MCs)
     return path
     
+def run_gamestate(gs: GameState, p: Player, max_depth=8):
+    double_astar(gs.point_list, p.hand, p.caravan, MCs= gs.merchant_list, max_depth= max_depth)
+
 def double_astar(pc_list, hand, cube_list, MCs = None, max_depth = 8):
     result = forward_astar(pc_list, hand, cube_list, MCs = MCs, max_depth = max_depth)
     if len(result) < max_depth:
@@ -116,10 +119,7 @@ def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
                 continue
             old_cl = currentNode.goal.copy()
             for num_play, cubes in multi_plays:
-                if len(cubes) <= 10:
-                    lst_of_lsts = [cubes]
-                else:
-                    lst_of_lsts = drop_to_10(cubes)    
+                lst_of_lsts = gen_10_cubes(cubes)    
                 
                 for cl in lst_of_lsts:
                     child = currentNode.new_with(
@@ -202,8 +202,6 @@ def try_score(curr:Node):
         try:
             remove_each(child.goal, pc['cost'])
         except Exception as e:
-            print(curr)
-            print(pay_pcs( sorted(curr.pcs, reverse=True), curr.goal))
             raise e
         child_list.append(child)
     return child_list
@@ -232,10 +230,7 @@ def try_play(currentNode):
         if not multi_plays:
             continue
         for num_play, cubes in multi_plays:
-            if len(cubes) <= 10:
-                lst_of_lsts = [cubes]
-            else:
-                lst_of_lsts = drop_to_10(cubes)    
+            lst_of_lsts = gen_10_cubes(cubes)    
             
             for cara_opt in lst_of_lsts:
                 child = copy_to_child(currentNode, i, cara_opt, num_play)
@@ -348,8 +343,8 @@ def try_buy(currentNode: Node, MCs):
 ##
 
 def found_key(state: Node):
-    string = ''.join(map(str, state.goal.elements())).ljust(10,'0')
-    string += 'S:' + str(state.path.score())
+    string = ''.join(str(state.goal)).ljust(4,'0')
+    string += 'S:' + str(state.path.score)
     # string += 'L:' + str(len(state.path)) # makes sure to not over skip, but adds checks
     string += ''.join('1' if c['playable'] else '0' for c in state.hand) 
     return string
@@ -359,22 +354,21 @@ def pursue_if_better(child, found, frontier):
     if key not in found or child.priority < found[key]:
         found[key] = child.priority
         frontier.put(child)
-   
-def drop_to_10(caravan):
-    ret = []
-    for choice in combinations_with_replacement([1,2,3,4], len(caravan) - 10):
-        try:
-            new_cubes = caravan.copy()
-            remove_each( new_cubes, choice )
-            # for cube in choice:
-            #     new_cubes.remove(cube)
-            ret.append(new_cubes)
-        except (ValueError, AssertionError):
-            continue
-    return ret
+
+def gen_10_cubes(caravan: Caravan):
+    # Occasionally, compare this to a version that copies. It can sometimes be faster
+    if len(caravan) <= 10:
+        yield caravan
+        return True
+        
+    for choice in combinations(caravan._inv, len(caravan) - 10):
+        remove_each( caravan, choice )
+        yield caravan
+        append_each( caravan, choice )
+    return True
 
 def goodness(node: Node):
-    score = node.path.score()
+    score = node.path.score
     score_turns = node.path.score_turn()
     buy = len(node.hand)
     spices = sum(node.goal.elements())
@@ -382,3 +376,16 @@ def goodness(node: Node):
     # 1 turn < +2 pt < 3 turn
     # 2 spice < buy < 6 spice
     return 4*score + sum( -4*x for x in score_turns ) + 5*buy + spices
+
+def combinations(seq, length):
+    a = max(min(seq[0], length), 0)
+    for w in range(a, -1, -1):
+        b = max(min(seq[1], length-w), 0)
+        for x in range(b, -1, -1):
+            c = max(min(seq[2], length-w-x), 0)
+            for y in range(c, -1, -1):
+                d = max(min(seq[3], length-w-x-y), 0)
+                for z in range(d, -1, -1):
+                    if w+x+y+z == length:
+                        yield [1]*w+[2]*x+[3]*y+[4]*z
+    return True

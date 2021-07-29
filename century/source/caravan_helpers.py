@@ -26,7 +26,7 @@ class Caravan():
         return True
 
     def __str__(self):
-        return str(self._inv)
+        return "".join(str(x) for x in self._inv)
 
     def __repr__(self):
         return "Cara:"+str(self)

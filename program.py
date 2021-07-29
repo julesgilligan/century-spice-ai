@@ -1,5 +1,5 @@
 
-from century.source.SpiceAI import double_astar, DFS, forward_astar, game_search, run_game
+from century.source.SpiceAI import double_astar, DFS, forward_astar, game_search, play_upgrade, run_game, run_gamestate
 import random
 import os
 from century.source.structures import Player, PointCard, GameState, MCs_from_file, MerchantCard, PCs_from_file
@@ -11,15 +11,15 @@ def playground():
         mcs = MCs_from_file(f)
     with open(os.path.join(curr_dir, 'century/resources/PointCards.txt')) as f:
         pcs = PCs_from_file(f)
+    
     for i in range(15):
         random.seed(42)
         gs, p = random_game(mcs[3:], pcs, hand_size= 5)
         # print(p.hand[3])
+        # run_gamestate(gs, p)
         game_search(gs, p)
         print(i)
     
-
-
 def tokenize_game(gs:GameState, p:Player):
     # Use pickle for general serializing. .compress for NN input layers
     # import pickle
@@ -83,21 +83,13 @@ def compare_three():
 
         print(f"{i}, {hand_size}, {depth}, {good_a}, {good_d}, {score_a}, {score_d}, {time_a}, {time_d}")
 
-
-if __name__ == '__main__':
-    try:
-        playground()
-    except (EOFError,KeyboardInterrupt) as e:
-        print("\nGoodbye! Play again soon")
-        exit(e)
-
 def prof():
     import cProfile
     import pstats
     profile = cProfile.Profile()
     profile.enable()
     
-    playground()
+    profile()
 
     #
     # End Doc Profiling code
@@ -107,3 +99,10 @@ def prof():
     p.strip_dirs().sort_stats('time').print_stats(10)
     p.sort_stats('time').print_callers(3)
     
+if __name__ == '__main__':
+    try:
+        from century.source.SpiceAI import head2head, combinations
+        playground()
+    except (EOFError,KeyboardInterrupt) as e:
+        print("\nGoodbye! Play again soon")
+        exit(e)

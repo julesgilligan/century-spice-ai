@@ -227,6 +227,7 @@ def test_forw_buy():
 
     path = forward_astar( PCs, HAND, RES, MCs= MCs, max_depth=4)
     follow = follow_path(path, RES)
+    assert path.score == 14
     assert check_pcs(PCs, follow)
     assert len(path) == 4
 def test_dfs():
@@ -245,6 +246,7 @@ def test_dfs():
 
     path = DFS( PCs, HAND, RES )
     follow = follow_path(path, RES)
+    assert path.score == 14
     assert check_pcs(PCs, follow)
 
     ## Test 2
