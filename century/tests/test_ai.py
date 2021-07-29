@@ -2,14 +2,26 @@
 tests for the various functions. Run 'pytest' in shell from the project directory
 """
 
+import functools
 from collections import Counter
 
 import pytest
+from century.source import ActionType, MerchantCard, PointCard
+from century.source.switch import Caravan
+from century.source.SpiceAI import (DFS, forward_astar, pay_pcs, play_card,
+                                    play_upgrade)
 
-from century.source.structures import ActionType, MerchantCard, PointCard
+def caravan_second_arg(func):
+    functools.wraps(func)
+    def wrapper(a, lst):
+        if not isinstance(lst, Caravan):
+            return func(a, Caravan(lst))
+        return func(a, lst)
+    return wrapper
 
-from century.source.SpiceAI import DFS, forward_astar, pay_pcs, play_card, play_upgrade
-
+play_card = caravan_second_arg(play_card)
+play_upgrade = caravan_second_arg(play_upgrade)
+pay_pcs = caravan_second_arg(pay_pcs)
 
 def test_play_card():
     mmc = MerchantCard
@@ -98,23 +110,21 @@ def test_pay_pcs():
     assert pay_pcs([card1, card2],[1,1,2,2,3]) == [card1] 
     assert pay_pcs([card1, card2],[1,1,1,2,3,3]) == [card1, card2] 
     assert pay_pcs([mpc([1,1,2]), mpc([2,2,3])],[2]) == []
-#@pytest.mark.skip()
+
+@pytest.mark.skip()
+def test_solo():
+    pass
+
 def test_forw_astar():
-    def follow_path(path, resources = None):
-        if resources == None:
-            resources = []
-        for action in path:
-            if action.type == ActionType.PLAY:
-                action.card.playable = True
-                multi_plays = play_card(action.card, resources)
-                resources = multi_plays[action.times - 1][1]
-        return resources
-    
     ## Test 1
-    card1 = MerchantCard([],[1])
-    card2 = MerchantCard([],[2,3])
+    HAND = [
+        MerchantCard([],[1]),
+        MerchantCard([1],[]),
+        MerchantCard([],[2,3])
+    ]
     path = forward_astar( [PointCard(0, [1,1]), PointCard(0, [1,2,3])], 
-        [card1,MerchantCard([1],[]),card2], [2] )
+        HAND, [2] )
+    print(path)
     follow = follow_path(path, [2])
     assert check_pcs([PointCard(0, [1,1]), PointCard(0, [1,2,3])], follow)
     assert check_pcs([PointCard(0, [1,2,3])], follow)
@@ -202,24 +212,84 @@ def test_forw_astar():
     follow = follow_path(path, RES)
     assert check_pcs(PCs, follow)
 
-def test_dfs():
-    #TODO Write actual tests for dfs. What should they be? 
-    HAND2 = [
-        MerchantCard([],reward=[1,1]),
-        MerchantCard([],reward=[3]),
-        MerchantCard([],[5,5])
+def test_forw_buy():
+    ## Test 1
+    HAND = [
+        MerchantCard([],reward=[1, 3])
     ]
-    PCs2 = [PointCard(14,[2, 2, 2, 2, 3, 3])]
-    RES2 = []
+    MCs = [
+        MerchantCard([], [3]),
+        MerchantCard([1], [1]),
+        MerchantCard([], [2,2])
+    ]
+    PCs = [PointCard(14,[1, 2, 2])]
+    RES = [1, 1]
+
+    path = forward_astar( PCs, HAND, RES, MCs= MCs, max_depth=4)
+    follow = follow_path(path, RES)
+    assert check_pcs(PCs, follow)
+    assert len(path) == 4
+def test_dfs():
+    #TODO Write actual tests for dfs. What should they be?
+    ## Test 1
+    HAND = [
+        MerchantCard([],reward=[1,1,1]),
+        MerchantCard([],reward=[1,1]),
+        MerchantCard([3,3],[4,4]),
+        MerchantCard([2,2,2],[3,3,3]),
+        MerchantCard([1,1],[2,2]),
+        MerchantCard([4],[1,2,3])
+    ]
+    PCs = [PointCard(14,[1, 2, 3, 4])]
+    RES = [2]
+
+    path = DFS( PCs, HAND, RES )
+    follow = follow_path(path, RES)
+    assert check_pcs(PCs, follow)
+
+    ## Test 2
+    HAND = [
+        MerchantCard([],reward=[1,1])
+    ]
+    MCs = [ 
+        MerchantCard([], [3]),
+        MerchantCard([],reward=[2,2]) 
+    ]
+    PCs = [ PointCard(10, [2,2,2]) ]
+    RES = [2]
+    path = DFS( PCs, HAND, RES, MCs= MCs, max_depth= 4)
+    follow = follow_path(path, RES)
+    assert follow == [1,1,2,2,2]
+    assert check_pcs(PCs, follow)
+
+    ## Important DFS thing to figure out later. Should get it in 8 (123R123S)
+    # HAND = [
+    #     MerchantCard([],reward=[1,1]),
+    #     MerchantCard([],reward=[3]),
+    #     MerchantCard([],[5,5])
+    # ]
+    # PCs = [PointCard(14,[2, 2, 2, 2, 3, 3])]
+    # RES = []
     
-    val = DFS( PCs2, HAND2, RES2, max_depth=8 )
+    # val = DFS( PCs, HAND, RES, max_depth=8 )
+    # follow = follow_path(val, RES)
+    # assert check_pcs(PCs, follow)
 
+def follow_path(path, resources = None):
+    if resources == None:
+        resources = []
+    for action in path:
+        if action.type == ActionType.PLAY:
+            action.card.playable = True
+            multi_plays = play_card(action.card, resources)
+            resources = multi_plays[action.times - 1][1]
+    return resources
 
-def check_pcs(pcs, caravan):
+@caravan_second_arg
+def check_pcs(pcs, caravan: Caravan):
     """
     Can resources pay for at least one of PointCards?
     """
-    spices = Counter(caravan)
     return any(
-        0 == sum( (Counter(pc['cost']) - spices) )
+        caravan.pays_for(pc['cost']) #0 == sum( (Counter(pc['cost']) - spices) )
         for pc in pcs)

@@ -7,9 +7,13 @@ Cards.
 '''
 from collections import Counter
 from itertools import combinations_with_replacement
+from os import remove
 from queue import PriorityQueue
 
-from .structures import Action, ActionType, GameState, MerchantCard, Node, NodeMutable, Path, Player, PointCard
+from .path import Action, ActionType, Node, NodeMutable, Path
+from .structures import GameState, MerchantCard, Player, PointCard
+from .switch import Caravan, append_each, remove_each
+
 
 def run_game(PCs, hand, resources, MCs):
     PCs = [x for x in PCs if isinstance(x, PointCard)]
@@ -17,17 +21,17 @@ def run_game(PCs, hand, resources, MCs):
     resources = [x for x in resources if x in [1,2,3,4]]
     MCs = [x for x in MCs if isinstance(x, MerchantCard)]
 
-    path = DFS(PCs, hand, resources, MCs)
     path = double_astar(PCs, hand, resources, MCs)
+    path = DFS(PCs, hand, resources, MCs)
     return path
     
-def double_astar(pc_list, hand, caravan, MCs = None, max_depth = 8):
-    result = forward_astar(pc_list, hand, caravan, MCs = MCs, max_depth = max_depth)
+def double_astar(pc_list, hand, cube_list, MCs = None, max_depth = 8):
+    result = forward_astar(pc_list, hand, cube_list, MCs = MCs, max_depth = max_depth)
     if len(result) < max_depth:
-        result = forward_astar(pc_list, hand, caravan, MCs = MCs, max_depth = (max_depth - len(result)), start_path = result)
+        result = forward_astar(pc_list, hand, cube_list, MCs = MCs, max_depth = (max_depth - len(result)), start_path = result)
     return result
 
-def forward_astar(pc_list, hand, caravan, **kwargs):
+def forward_astar(pc_list, hand, cube_list, **kwargs):
     """
     Additional keyword arguments include:\n 
     MCs: list[MerchantCard] = None \n 
@@ -39,7 +43,7 @@ def forward_astar(pc_list, hand, caravan, **kwargs):
     max_depth = kwargs.get('max_depth', 8)
 
     frontier = PriorityQueue()
-    frontier.put(Node(caravan, start_path, hand, pc_list) )
+    frontier.put(Node(cube_list, start_path, hand, pc_list) )
     found = {}
     while not frontier.empty():
         currentNode: Node = frontier.get()
@@ -48,21 +52,14 @@ def forward_astar(pc_list, hand, caravan, **kwargs):
 
         # Action: Score
         ts = try_score(currentNode)
-        if ts != []:
-            # return goodness(ts[0]), ts[0].path # try_score sorts highest value first
-            return ts[0].path
+        if ts != []: return ts[0].path
 
-        # Action: Play
-        # Generate child nodes from valid card plays
         children = try_play(currentNode)
-        # Action: Reclaim
-        # One child from picking up all cards
         children.extend(try_reclaim(currentNode))
-        if MCs:
-            children.extend(try_buy(currentNode, MCs))
+        if MCs: children.extend(try_buy(currentNode, MCs))
+        
         for child in children:
             pursue_if_better(child, found, frontier)
-    # return goodness(Node(caravan, start_path, hand, pc_list)), start_path
     return start_path
 
 ### DFS, RECURSIVE, w/o COPY
@@ -70,7 +67,7 @@ def forward_astar(pc_list, hand, caravan, **kwargs):
 def game_search(gs: GameState, p: Player, max_depth = 8):
     return DFS(gs.point_list, p.hand, p.caravan, gs.merchant_list, max_depth)
 
-def DFS(pc_list, hand, caravan, MCs = None, max_depth = 8) -> Path:
+def DFS(pc_list, hand, cube_list, MCs = None, max_depth = 8) -> Path:
     """
     API entrance for running one player search by DFS. Returns the best Path
     (by the goodness function) and should be faster than previous A* attempts
@@ -79,11 +76,7 @@ def DFS(pc_list, hand, caravan, MCs = None, max_depth = 8) -> Path:
     node_count = [0]
     global tree
     tree = [0]*(max_depth + 1)
-    result = dfs_recursive(NodeMutable(caravan, Path(), hand, pc_list), MCs, found, max_depth, node_count)
-    # print("DFS count (all nodes):", node_count[0])
-    # print("tree (explored nodes)",tree[::-1], sum(tree))
-    # print("Goodness: ", goodness(result))
-    # return goodness(result), result.path
+    result = dfs_recursive(NodeMutable(cube_list, Path(), hand, pc_list), MCs, found, max_depth, node_count)
     return result.path
 
 def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
@@ -101,6 +94,7 @@ def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
 
     # Generator version of previous try_*()
     # These avoid copying by backtracing between returning neighbors  
+
     def yield_score(curr:Node):
         for pc in pay_pcs( sorted(curr.pcs, reverse=True), curr.goal):
             if curr.path.already_scored(pc):
@@ -108,23 +102,19 @@ def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
             child = curr.new_with(
                 path = curr.path.add(Action(ActionType.SCORE, pc))
             )
-            new_goal = child.goal
-            for x in pc['cost']:
-                new_goal.remove(x)
+            remove_each(child.goal, pc['cost'])
             yield child
-            for x in pc['cost']:
-                new_goal.append(x)
-            new_goal.sort()
+            append_each(child.goal, pc['cost'])
             curr.drop_last()
         return True
-    
+
     def yield_play(currentNode):
         for i, card in enumerate(currentNode.hand):
             multi_plays = play_card(card, currentNode.goal)
             # If card can't be played, skip
             if not multi_plays:
                 continue
-            old_cl = currentNode.goal
+            old_cl = currentNode.goal.copy()
             for num_play, cubes in multi_plays:
                 if len(cubes) <= 10:
                     lst_of_lsts = [cubes]
@@ -165,21 +155,19 @@ def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
     def yield_buy(currentNode: Node, MCs):
         if MCs == None:
             return False
-        for i in range(min(currentNode.goal.count(1),len(MCs))):
+        for i in range(min( currentNode.goal.count(1),len(MCs))):
             mc = MCs[i]
             if mc in currentNode.hand:
                 continue
-            if 0 == sum( Counter(mc['cost']) - Counter(currentNode.goal) ):
+            if currentNode.goal.pays_for(mc['cost']):
                 child = currentNode.new_with(
                     path = currentNode.path.add(Action(ActionType.BUY, card = mc)),
                     hand = currentNode.hand + [MCs[i]]
                 )
 
-                caravan = child.goal
-                for _ in range(i): caravan.remove(1)
+                remove_each(child.goal, [1]*i )
                 yield child
-                for _ in range(i): caravan.append(1)
-                caravan.sort()
+                append_each(child.goal, [1]*i )
                 currentNode.hand.pop()
                 currentNode.drop_last()
         return True
@@ -194,7 +182,8 @@ def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
             if key not in found or child.priority < found[key][1]:
                 result = dfs_recursive(child, MCs, found, max_depth - 1, counter)
                 if goodness(result) > goodness(best_node):
-                    best_node =  Node(result.goal, result.path, result.hand, result.pcs)
+                    # not clear why result.new_with doesn't work here
+                    best_node = Node(result.goal, result.path, result.hand, result.pcs)
 
     return best_node
 
@@ -210,23 +199,25 @@ def try_score(curr:Node):
         child = curr.new_with(
             path = curr.path.add(Action(ActionType.SCORE, pc))
         )
-        new_goal = child.goal
-        for x in pc['cost']:
-            new_goal.remove(x)
+        try:
+            remove_each(child.goal, pc['cost'])
+        except Exception as e:
+            print(curr)
+            print(pay_pcs( sorted(curr.pcs, reverse=True), curr.goal))
+            raise e
         child_list.append(child)
     return child_list
 
-def pay_pcs(pcs: list[PointCard], resources) -> list[PointCard]:
+def pay_pcs(pcs: list[PointCard], caravan) -> list[PointCard]:
     """
     Which PointCards can resources pay for? Pays for in given order, caller sort by cost
     """
     running_list = []
-    res = Counter(resources)
+    res = caravan.copy()
     for pc in pcs:
-        pcc = Counter(pc['cost'])
-        if 0 == sum((pcc - res).values()):
+        if res.pays_for(pc['cost']):
             running_list.append(pc)
-            res -= pcc # remove already paid resources
+            remove_each(res, pc['cost']) # remove already paid resources
     return running_list
 
 ##
@@ -246,25 +237,23 @@ def try_play(currentNode):
             else:
                 lst_of_lsts = drop_to_10(cubes)    
             
-            for cl in lst_of_lsts:
-                child = copy_to_child(currentNode, i, cl, num_play)
+            for cara_opt in lst_of_lsts:
+                child = copy_to_child(currentNode, i, cara_opt, num_play)
                 child_list.append(child)
     return child_list
 
-def play_card(card: MerchantCard, resources):
-    """Forward play a card. Returns a list[ (plays, resources) ] or False if impossible"""
+def play_card(card: MerchantCard, caravan: Caravan):
+    """Forward play a card. Returns a list[ (plays, caravan) ] or False if impossible"""
     if not card['playable']: 
         return False
     if card.is_upgrade():
-        return play_upgrade(card, resources)
-   
-    caravan = Counter(resources)
-    cost = Counter(card['cost'])
-    reward = Counter(card['reward'])
+        return play_upgrade(card, caravan)
+    
+    cost = Counter(card['cost']) # TODO? literally the only use of Counter() in SpiceAI
     if len(card['cost']) > 0:
         # Trades can be done multiple times
         multiples = min(
-            caravan[key] // cost[key]
+            caravan.count(key) // cost[key]
             for key in cost.keys()
         )
         if multiples == 0:
@@ -275,22 +264,25 @@ def play_card(card: MerchantCard, resources):
 
     pursue = [None]*multiples
     for i in range(multiples):
-        caravan -= cost
-        caravan += reward
-        pursue[i] = (i+1, sorted(caravan.elements())) 
-
+        remove_each(caravan, card['cost'])
+        append_each(caravan, card['reward'])
+        pursue[i] = (i+1, caravan.copy())
+    # this section avoids copying by returning parent caravan to original status
+    for i in range(multiples):
+        append_each(caravan, card['cost'])
+        remove_each(caravan, card['reward'])
     return pursue
 
-def play_upgrade(upgrade, resources):
+def play_upgrade(upgrade, caravan):
     cnt = upgrade['reward'].count(5)
     effective_cards = [MerchantCard([1],[2]), MerchantCard([2],[3]), MerchantCard([3],[4])]
 
     def play_once(c):
         # 'caravan' comes from play_upgrade scope
-        if caravan.count( c['cost'][0]) > 0:
-            caravan.remove(c['cost'][0])
-            caravan.append(c['reward'][0])
-            caravan.sort()
+        if car_cpy.count( c['cost'][0] ) > 0:
+            remove_each(car_cpy, [ c['cost'][0] ] )
+            append_each(car_cpy, [ c['reward'][0] ] )
+            # car_cpy.sort()
             return True
         return False
 
@@ -298,21 +290,21 @@ def play_upgrade(upgrade, resources):
     index = 1
     for num in range(cnt):
         for comb in combinations_with_replacement(effective_cards, num + 1):
-            caravan = resources.copy()
+            car_cpy = caravan.copy()
             # If this combination of upgrades can all be played, save it
             if all( map(play_once, comb) ):
-                pursue.append( (index, caravan) )
+                pursue.append( (index, car_cpy) )
                 index += 1
 
     if pursue == []:
         return False
     return pursue
 
-def copy_to_child(parent : Node, index, new_resources, num_plays) -> Node:
+def copy_to_child(parent : Node, index, new_cara, num_plays) -> Node:
     '''Make a child Node from parent with copy of card at index with 'playable' set to False.'''
     child = parent.new_with(
         path = parent.path.add(Action(ActionType.PLAY, parent.hand[index], plays=num_plays)),
-        caravan = new_resources
+        caravan = new_cara
     )
     child.hand[index]['playable'] = False
     return child
@@ -338,17 +330,16 @@ def try_reclaim(currentNode:Node):
 
 def try_buy(currentNode: Node, MCs):
     children = []
-    for i in range(min(currentNode.goal.count(1),len(MCs))):
+    for i in range(min( currentNode.goal.count(1),len(MCs))):
         mc = MCs[i]
         if mc in currentNode.hand:
             continue
-        if 0 == sum( Counter(mc['cost']) - Counter(currentNode.goal) ):
+        if currentNode.goal.pays_for(mc['cost']):
             child = currentNode.new_with(
                 path = currentNode.path.add(Action(ActionType.BUY, card = mc)),
                 hand = currentNode.hand + [MCs[i]]
             )
-            caravan = child.goal
-            for _ in range(i): caravan.remove(1)
+            remove_each(child.goal, [1]*i)
             children.append(child)
     return children
 
@@ -357,7 +348,7 @@ def try_buy(currentNode: Node, MCs):
 ##
 
 def found_key(state: Node):
-    string = ''.join(map(str,state.goal)).ljust(10,'0')
+    string = ''.join(map(str, state.goal.elements())).ljust(10,'0')
     string += 'S:' + str(state.path.score())
     # string += 'L:' + str(len(state.path)) # makes sure to not over skip, but adds checks
     string += ''.join('1' if c['playable'] else '0' for c in state.hand) 
@@ -369,15 +360,16 @@ def pursue_if_better(child, found, frontier):
         found[key] = child.priority
         frontier.put(child)
    
-def drop_to_10(cubes):
+def drop_to_10(caravan):
     ret = []
-    for choice in combinations_with_replacement([1,2,3,4], len(cubes) - 10):
+    for choice in combinations_with_replacement([1,2,3,4], len(caravan) - 10):
         try:
-            new_cubes = cubes.copy()
-            for cube in choice:
-                new_cubes.remove(cube)
+            new_cubes = caravan.copy()
+            remove_each( new_cubes, choice )
+            # for cube in choice:
+            #     new_cubes.remove(cube)
             ret.append(new_cubes)
-        except ValueError:
+        except (ValueError, AssertionError):
             continue
     return ret
 
@@ -385,7 +377,7 @@ def goodness(node: Node):
     score = node.path.score()
     score_turns = node.path.score_turn()
     buy = len(node.hand)
-    spices = sum(node.goal)
+    spices = sum(node.goal.elements())
     # 1 turn < buy one card < 2 turns
     # 1 turn < +2 pt < 3 turn
     # 2 spice < buy < 6 spice

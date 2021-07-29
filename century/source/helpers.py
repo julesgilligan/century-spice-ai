@@ -58,3 +58,4 @@ def random_game(select_mcs, select_pcs, hand_size):
 def random_upgrade():
     effective_cards = [MerchantCard([1],[2]), MerchantCard([2],[3]), MerchantCard([3],[4])]
     return random.choice(effective_cards)
+

@@ -1,14 +1,14 @@
-from century.source.SpiceAI import play_card, run_game
-from century.source.structures import Action, ActionType
+import curses
 import re
 from dataclasses import dataclass, field
 
 import npyscreen
-import curses
 
-from century.source.structures import GameState, MerchantCard, Path, Player, PointCard
-from century.source.rules import RULES as R
+from century.source import (Action, ActionType, GameState, MerchantCard, Path,
+                            Player, PointCard)
 from century.source.helpers import read_merchant_card, read_point_card
+from century.source.rules import RULES as R
+from century.source.SpiceAI import play_card, run_game
 
 
 class MyTestApp(npyscreen.NPSAppManaged):
@@ -289,7 +289,7 @@ class Game():
         string = str(p)
         return string.splitlines()[1:-1]
 
-def follow_action(action: Action , game: Game):
+def follow_action(action: Action, game: Game):
     if action.type == ActionType.BUY:
         game.ai.hand.append(action.card)
         return
