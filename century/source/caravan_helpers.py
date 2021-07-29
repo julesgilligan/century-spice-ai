@@ -18,6 +18,9 @@ class Caravan():
         assert 1 <= item <= 4
         return self._inv[item-1]
     
+    def counts(self):
+        return self._inv
+
     def pays_for(self, cost) -> bool:
         c_cost = Counter(cost)
         for i in range(1,5):

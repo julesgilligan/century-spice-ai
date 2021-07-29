@@ -1,5 +1,5 @@
 
-from century.source.SpiceAI import double_astar, DFS, forward_astar, game_search, goodness, play_upgrade, run_game, run_gamestate
+from century.source.SpiceAI import double_astar, DFS, forward_astar, game_search, run_gamestate
 import random
 import os
 from century.source.structures import Player, PointCard, GameState, MCs_from_file, MerchantCard, PCs_from_file
@@ -16,8 +16,8 @@ def playground():
         random.seed(18)
         gs, p = random_game(mcs[3:], pcs, hand_size= 5)
         # print(p.hand[3])
-        path = run_gamestate(gs, p)
-        # path = game_search(gs, p)
+        # path = run_gamestate(gs, p)
+        path = game_search(gs, p)
         print(i)
     print(path)
     

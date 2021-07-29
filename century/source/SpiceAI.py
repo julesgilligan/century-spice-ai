@@ -7,7 +7,6 @@ Cards.
 '''
 from collections import Counter
 from itertools import combinations_with_replacement
-from os import remove
 from queue import PriorityQueue
 
 from .path import Action, ActionType, Node, NodeMutable, Path
@@ -16,21 +15,29 @@ from .switch import Caravan, append_each, remove_each
 
 
 def run_game(PCs, hand, resources, MCs):
+    'Non-gamestate entry for double astar then DFS, return latter'
     PCs = [x for x in PCs if isinstance(x, PointCard)]
     hand = [x for x in hand if isinstance(x, MerchantCard)]
     if isinstance(resources, Caravan):
-        resources = resources.elements()
-    resources = [x for x in resources if x in [1,2,3,4]]
+        cube_list = resources.elements()
+    elif isinstance(resources, list):
+        cube_list = resources 
+    else:
+        cube_list = ['BAD']
+        ValueError("Neither expected form")
+    cube_list = [x for x in cube_list if x in [1,2,3,4]]
     MCs = [x for x in MCs if isinstance(x, MerchantCard)]
 
-    path = double_astar(PCs, hand, resources, MCs)
-    path = DFS(PCs, hand, resources, MCs)
+    path = double_astar(PCs, hand, cube_list, MCs)
+    path = DFS(PCs, hand, cube_list, MCs)
     return path
     
 def run_gamestate(gs: GameState, p: Player, max_depth=8):
+    'Gamestate entry for double_astar'
     return double_astar(gs.point_list, p.hand, p.caravan, MCs= gs.merchant_list, max_depth= max_depth)
 
 def double_astar(pc_list, hand, cube_list, MCs = None, max_depth = 8):
+    'path to two point cards less than max_depth total'
     result = forward_astar(pc_list, hand, cube_list, MCs = MCs, max_depth = max_depth)
     if len(result) < max_depth:
         result = forward_astar(pc_list, hand, cube_list, MCs = MCs, max_depth = (max_depth - len(result)), start_path = result)
@@ -38,7 +45,7 @@ def double_astar(pc_list, hand, cube_list, MCs = None, max_depth = 8):
 
 def forward_astar(pc_list, hand, cube_list, **kwargs):
     """
-    Additional keyword arguments include:\n 
+    Additional keyword arguments:\n 
     MCs: list[MerchantCard] = None \n 
     max_depth: int = 8 \n 
     start_path: Path = None
@@ -54,125 +61,42 @@ def forward_astar(pc_list, hand, cube_list, **kwargs):
         currentNode: Node = frontier.get()
         if len(currentNode.path) == max_depth:
             break
-
-        # Action: Score
+        
         ts = try_score(currentNode)
         if ts != []: return ts[0].path
-
-        children = try_play(currentNode)
-        children.extend(try_reclaim(currentNode))
-        if MCs: children.extend(try_buy(currentNode, MCs))
-        
-        for child in children:
-            pursue_if_better(child, found, frontier)
+      
+        for gen in (yield_play, yield_reclaim, lambda x: yield_buy(x, MCs)):
+            for child in gen(currentNode):
+                kid = child.new_with(child.path)
+                pursue_if_better(kid, found, frontier) # return T|F for debugging
+            
     return start_path
 
 ### DFS, RECURSIVE, w/o COPY
 
 def game_search(gs: GameState, p: Player, max_depth = 8):
+    'Gamestate entry for DFS'
     return DFS(gs.point_list, p.hand, p.caravan, gs.merchant_list, max_depth)
 
 def DFS(pc_list, hand, cube_list, MCs = None, max_depth = 8) -> Path:
     """
-    API entrance for running one player search by DFS. Returns the best Path
-    (by the goodness function) and should be faster than previous A* attempts
+    Non-gamestate entrance for running one player search by DFS. Returns the
+    best Path by SpiceAI.goodness()
     """
     found = {}
     node_count = [0]
-    global tree
-    tree = [0]*(max_depth + 1)
     result = dfs_recursive(NodeMutable(cube_list, Path(), hand, pc_list), MCs, found, max_depth, node_count)
     return result.path
 
 def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
     """
     Called by DFS() to recursively find the best path from 'curr'. Stores
-    progress in 'found' to avoid overvisting. 
+    progress in 'found' to avoid overvisiting. 
     """
     found[found_key(curr)] = (len(curr.path), curr.priority)
-    tree[max_depth] += 1
-    # if sum(tree) % 10000 == 0:
-    #     print(counter[0])
 
     if max_depth < 1:
         return curr
-
-    # Generator version of previous try_*()
-    # These avoid copying by backtracing between returning neighbors  
-
-    # def yield_score(curr:Node):
-    #     for pc in pay_pcs( sorted(curr.pcs, reverse=True), curr.goal):
-    #         if curr.path.already_scored(pc):
-    #             continue
-    #         child = curr.new_with(
-    #             path = curr.path.add(Action(ActionType.SCORE, pc))
-    #         )
-    #         remove_each(child.goal, pc['cost'])
-    #         yield child
-    #         append_each(child.goal, pc['cost'])
-    #         curr.drop_last()
-    #     return True
-
-    # def yield_play(currentNode):
-    #     for i, card in enumerate(currentNode.hand):
-    #         multi_plays = play_card(card, currentNode.goal)
-    #         # If card can't be played, skip
-    #         if not multi_plays:
-    #             continue
-    #         old_cl = currentNode.goal.copy()
-    #         for num_play, cubes in multi_plays:
-    #             lst_of_lsts = gen_10_cubes(cubes)    
-                
-    #             for cl in lst_of_lsts:
-    #                 child = currentNode.new_with(
-    #                     path = currentNode.path.add(Action(ActionType.PLAY, currentNode.hand[i], plays=num_play)),
-    #                     caravan = cl
-    #                 )
-            
-    #                 old_play = child.hand[i]['playable']
-    #                 child.hand[i]['playable'] = False
-    #                 yield child
-    #                 child.hand[i]['playable'] = old_play
-                    
-    #                 child.drop_last()
-    #         object.__setattr__(currentNode, 'goal', old_cl)
-    #     return True
-
-    # def yield_reclaim(currentNode:Node):
-    #     if all( map(lambda card : card['playable'], currentNode.hand) ):
-    #         return False
-            
-    #     child = currentNode.new_with(
-    #         path = currentNode.path.add(Action(ActionType.RECLAIM))
-    #     )
-    #     old_playable = [card['playable'] for card in child.hand]
-    #     for card in child.hand:
-    #         card['playable'] = True
-    #     yield child 
-    #     for i, card in enumerate(child.hand):
-    #         card['playable'] = old_playable[i]
-    #     child.drop_last()
-    #     return True
-
-    # def yield_buy(currentNode: Node, MCs):
-    #     if MCs == None:
-    #         return False
-    #     for i in range(min( currentNode.goal.count(1),len(MCs))):
-    #         mc = MCs[i]
-    #         if mc in currentNode.hand:
-    #             continue
-    #         if currentNode.goal.pays_for(mc['cost']):
-    #             child = currentNode.new_with(
-    #                 path = currentNode.path.add(Action(ActionType.BUY, card = mc)),
-    #                 hand = currentNode.hand + [MCs[i]]
-    #             )
-
-    #             remove_each(child.goal, [1]*i )
-    #             yield child
-    #             append_each(child.goal, [1]*i )
-    #             child.hand.pop()
-    #             child.drop_last()
-    #     return True
 
     best_node = Node([], Path(), [], [])
 
@@ -185,7 +109,7 @@ def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
                 result = dfs_recursive(child, MCs, found, max_depth - 1, counter)
                 if goodness(result) > goodness(best_node):
                     # not clear why result.new_with doesn't work here
-                    best_node = Node(result.goal, result.path, result.hand, result.pcs)
+                    best_node = NodeMutable(result.goal, result.path, result.hand, result.pcs)
 
     return best_node
 
@@ -193,9 +117,8 @@ def dfs_recursive(curr: Node, MCs, found, max_depth, counter) -> Node:
 ## Get neighbors from trying to SCORE
 ##
 def yield_score(curr:Node):
-    for pc in pay_pcs( sorted(curr.pcs, reverse=True), curr.goal):
-        if curr.path.already_scored(pc):
-            continue
+    pc = pay_pcs( sorted(curr.pcs, reverse=True), curr.goal)
+    if pc and not curr.path.already_scored(pc):
         child = curr.new_with(
             path = curr.path.add(Action(ActionType.SCORE, pc))
         )
@@ -211,39 +134,19 @@ def try_score(curr:Node):
         lst.append(child.new_with(child.path))
     return lst
 
-def OGtry_score(curr:Node):
-    child_list = []
-    for pc in pay_pcs( sorted(curr.pcs, reverse=True), curr.goal):
-        if curr.path.already_scored(pc):
-            continue
-        child = curr.new_with(
-            path = curr.path.add(Action(ActionType.SCORE, pc))
-        )
-        try:
-            remove_each(child.goal, pc['cost'])
-        except Exception as e:
-            raise e
-        child_list.append(child)
-    return child_list
-
-def pay_pcs(pcs: list[PointCard], caravan) -> list[PointCard]:
+def pay_pcs(pcs: list[PointCard], caravan: Caravan) :
     """
     Which PointCards can resources pay for? Pays for in given order, caller sort by cost
     """
-    running_list = []
-    res = caravan.copy()
     for pc in pcs:
-        if res.pays_for(pc['cost']):
-            running_list.append(pc)
-            remove_each(res, pc['cost']) # remove already paid resources
-    return running_list
+        if caravan.pays_for(pc['cost']):
+            return pc
+    return False
 
 ##
 ## Get neighbors from trying to PLAY
 ##
-
-
-def yield_play(currentNode):
+def yield_play(currentNode:Node):
     for i, card in enumerate(currentNode.hand):
         multi_plays = play_card(card, currentNode.goal)
         # If card can't be played, skip
@@ -273,21 +176,6 @@ def try_play(currentNode):
     for child in yield_play(currentNode):
         lst.append(child.new_with(child.path))
     return lst
-
-def OGtry_play(currentNode):
-    child_list = []
-    for i, card in enumerate(currentNode.hand):
-        multi_plays = play_card(card, currentNode.goal)
-        # If card can't be played, skip
-        if not multi_plays:
-            continue
-        for num_play, cubes in multi_plays:
-            lst_of_lsts = gen_10_cubes(cubes)    
-            
-            for cara_opt in lst_of_lsts:
-                child = copy_to_child(currentNode, i, cara_opt, num_play)
-                child_list.append(child)
-    return child_list
 
 def play_card(card: MerchantCard, caravan: Caravan):
     """Forward play a card. Returns a list[ (plays, caravan) ] or False if impossible"""
@@ -382,21 +270,9 @@ def try_reclaim(currentNode:Node):
         lst.append(child.new_with(child.path))
     return lst
 
-def OGtry_reclaim(currentNode:Node):
-    if all( map(lambda card : card['playable'], currentNode.hand) ):
-        return []
-          
-    child = currentNode.new_with(
-        path = currentNode.path.add(Action(ActionType.RECLAIM))
-    )
-    for card in child.hand:
-        card['playable'] = True
-    return [child]
-
 ##
 ## Get neighbors from trying to BUY
 ##
-
 def yield_buy(currentNode: Node, MCs):
     if MCs == None:
         return False
@@ -423,21 +299,6 @@ def try_buy(currentNode: Node, MCs):
         lst.append(child.new_with(child.path))
     return lst
 
-def OGtry_buy(currentNode: Node, MCs):
-    children = []
-    for i in range(min( currentNode.goal.count(1),len(MCs))):
-        mc = MCs[i]
-        if mc in currentNode.hand:
-            continue
-        if currentNode.goal.pays_for(mc['cost']):
-            child = currentNode.new_with(
-                path = currentNode.path.add(Action(ActionType.BUY, card = mc)),
-                hand = currentNode.hand + [MCs[i]]
-            )
-            remove_each(child.goal, [1]*i)
-            children.append(child)
-    return children
-
 ##
 ## Small functions to help clean things up
 ##
@@ -454,17 +315,21 @@ def pursue_if_better(child, found, frontier):
     if key not in found or child.priority < found[key]:
         found[key] = child.priority
         frontier.put(child)
+        return True
+    return False
 
 def gen_10_cubes(caravan: Caravan):
     # Occasionally, compare this to a version that copies. It can sometimes be faster
     if len(caravan) <= 10:
         yield caravan
         return True
-        
-    for choice in combinations(caravan._inv, len(caravan) - 10):
-        remove_each( caravan, choice )
-        yield caravan
-        append_each( caravan, choice )
+    
+    for choice in combinations(caravan.counts(), len(caravan) - 10):
+        # I don't love this, but some lists weren't getting repaired
+        car_cpy = caravan.copy() 
+        remove_each( car_cpy, choice )
+        yield car_cpy
+        # append_each( caravan, choice )
     return True
 
 def goodness(node: Node):
@@ -487,5 +352,5 @@ def combinations(seq, length):
                 d = max(min(seq[3], length-w-x-y), 0)
                 for z in range(d, -1, -1):
                     if w+x+y+z == length:
-                        yield [1]*w+[2]*x+[3]*y+[4]*z
+                        yield [1]*w +[2]*x +[3]*y +[4]*z
     return True

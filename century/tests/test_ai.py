@@ -3,13 +3,13 @@ tests for the various functions. Run 'pytest' in shell from the project director
 """
 
 import functools
-from collections import Counter
 
 import pytest
 from century.source import ActionType, MerchantCard, PointCard
-from century.source.switch import Caravan
 from century.source.SpiceAI import (DFS, forward_astar, pay_pcs, play_card,
                                     play_upgrade)
+from century.source.switch import Caravan
+
 
 def caravan_second_arg(func):
     functools.wraps(func)
@@ -101,15 +101,12 @@ def test_pay_pcs():
     card0 = mpc([])
     card1 = mpc([1,2,3])
     card2 = mpc([1,1,3])
-    assert pay_pcs([card0],[]) == [card0]
-    assert pay_pcs([mpc([2,2])],[]) == []
-    assert pay_pcs([card1],[1,2,3]) == [card1]
-    assert pay_pcs([mpc([1,1,3])],[1,3]) == []
-    assert pay_pcs([card2, card1],[1,1,3]) == [card2]
-    # Considers paying for both at the same time:
-    assert pay_pcs([card1, card2],[1,1,2,2,3]) == [card1] 
-    assert pay_pcs([card1, card2],[1,1,1,2,3,3]) == [card1, card2] 
-    assert pay_pcs([mpc([1,1,2]), mpc([2,2,3])],[2]) == []
+    assert pay_pcs([card0],[]) == card0
+    assert pay_pcs([mpc([2,2])],[]) == False
+    assert pay_pcs([card1],[1,2,3]) == card1
+    assert pay_pcs([mpc([1,1,3])],[1,3]) == False
+    assert pay_pcs([card2, card1],[1,1,3]) == card2
+    assert pay_pcs([card1, card2],[1,1,2,2,3]) == card1
 
 @pytest.mark.skip()
 def test_solo():
@@ -229,6 +226,47 @@ def test_forw_buy():
     assert path.score == 14
     assert check_pcs(PCs, follow)
     assert len(path) == 4
+
+    ## Test 2
+    # Needs to pick up both 1->3 and ->22. 
+    # (BAD) Can score either in length but goes for 10 because it's first
+    # (BAD) Could score with fewer cubes if it knows 1->3 makes ->22 cheaper
+    HAND = [
+    ]
+    MCs = [
+        MerchantCard([1], [3]),
+        MerchantCard([1], [1]),
+        MerchantCard([], [2,2])
+    ]
+    PCs = [PointCard(10,[2, 2, 3, 3]), PointCard(13,[2, 2, 2, 3])]
+    RES = [1, 1, 1, 1]
+
+    path = forward_astar( PCs, HAND, RES, MCs= MCs, max_depth=5)
+    follow = follow_path(path, RES)
+    assert path.score == 10
+    assert check_pcs(PCs, follow)
+    assert len(path) == 5
+
+    ## Test 3
+    # Needs to pick up both 1->3 and ->22
+    # Should get 13 earlier because PLAYx1 is before PLAYx2
+    HAND = [
+    ]
+    MCs = [
+        MerchantCard([1], [3]),
+        MerchantCard([1], [1]),
+        MerchantCard([], [2,2])
+    ]
+    PCs = [PointCard(10,[2, 2, 3, 3]), PointCard(13,[1, 2, 2, 3])]
+    RES = [1, 1, 1, 1]
+
+    path = forward_astar( PCs, HAND, RES, MCs= MCs, max_depth=5)
+    follow = follow_path(path, RES)
+    assert path.score == 13
+    assert check_pcs(PCs, follow)
+    assert len(path) == 5
+
+
 def test_dfs():
     #TODO Write actual tests for dfs. What should they be?
     ## Test 1
@@ -292,5 +330,5 @@ def check_pcs(pcs, caravan: Caravan):
     Can resources pay for at least one of PointCards?
     """
     return any(
-        caravan.pays_for(pc['cost']) #0 == sum( (Counter(pc['cost']) - spices) )
+        caravan.pays_for(pc['cost'])
         for pc in pcs)

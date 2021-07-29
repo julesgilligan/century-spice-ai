@@ -14,7 +14,7 @@ from century.source.SpiceAI import play_card, run_game
 
 class MyTestApp(npyscreen.NPSAppManaged):
     def onStart(self):
-        self.game : Game = Game(GameState([],[]), 
+        self.game: Game = Game(GameState([],[]), 
                                 Player(Caravan([1,1,1]), Player.starting_hand()))
         self.addForm("MAIN", DesktopForm, name="Small Form")
         self.addFormClass("RTRADE", ReplaceTrade, name="Replace Merchant Card")

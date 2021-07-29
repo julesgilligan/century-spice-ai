@@ -9,6 +9,10 @@ class Caravan(list):
 
     def pays_for(self, cost):
         return sum( (Counter(cost) - Counter(self)).values() ) == 0
+    
+    def counts(self):
+        cnt = Counter(self)
+        return [cnt[i] for i in range(1,5)]
 
 def remove_each(mutable: list, costly):
     # assumes the structure of mutable to be:

@@ -146,7 +146,7 @@ class Path():
 @dataclass(frozen = True, order = True)
 class Node():
     priority: float = field(init=False)
-    goal: Caravan
+    goal: Caravan = field(compare = False)
     path: Path = field(compare = False, repr = False)
     hand: list[MerchantCard] = field(compare = False, repr = False)
     pcs: list[PointCard] = field(compare = False, repr = False)
