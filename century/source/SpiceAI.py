@@ -29,7 +29,7 @@ def run_game(PCs, hand, resources, MCs):
     MCs = [x for x in MCs if isinstance(x, MerchantCard)]
 
     path = double_astar(PCs, hand, cube_list, MCs)
-    path = DFS(PCs, hand, cube_list, MCs)
+    # path = DFS(PCs, hand, cube_list, MCs)
     return path
     
 def run_gamestate(gs: GameState, p: Player, max_depth=8):

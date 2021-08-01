@@ -1,23 +1,23 @@
-Hand swap
-tests for gen10
 
  ##------------##
 ##  OPTIMIZE!!  ##
  ##____________##
 Box in UI to limit depth
 Report to UI the progress number
-Drop to 10 takes forever apparently
 Optimize for copy
     -> change hand to store playble indices (reduces copy of cards)
 
  ##-----------------##
 ##  Wrapper details  ##
  ##_________________##
-Follow path:
- -> cues replace merchant and point
- -> drops cubes
-Change cubes in main window
 paying for MCs isn't just counting yellows
+Don't show "replace __" without first adding to trades or points
+
+ ##------##
+##  MISC  ##
+ ##______##
+data structure for hands (playable only needs to be a bool list)
+tests for gen10
 
  ##-------------##
 ##  AI specific  ##
