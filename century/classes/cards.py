@@ -1,14 +1,6 @@
-"""
-Class structures and helpers for the AI.
-
-Node, MerchantCard, PointCard, Path, Action, etc.
-"""
-
-from century.source.caravan_helpers import Caravan
-import copy
-from dataclasses import dataclass, field
-
+from dataclasses import dataclass
 from termcolor import colored
+import copy
 
 CUBE_STRING = [chr(11157)+" ",
         colored("  ", on_color='on_yellow'),
@@ -18,6 +10,9 @@ CUBE_STRING = [chr(11157)+" ",
         "5"]
 COMPLENG_M = 9
 COMPLENG_P = 5
+
+def stringify_cubes(spices):
+    return ' '.join([CUBE_STRING[x] for x in spices])
 
 @dataclass(frozen = True)
 class PointCard():
@@ -52,7 +47,7 @@ class PointCard():
 
     def num_str(self):
         return str(self.worth) + "\t" + ' '.join(map(str, self.cost))
-    
+
     def compress(self):
         """Length 5: 1 worth, 4 cost"""
         string = str(hex(self['worth']-6).split('x')[-1])
@@ -140,72 +135,3 @@ class MerchantCard():
         if len(string) != COMPLENG_M:
             raise ValueError("MerchantCard compressed length isn't correct")
         return string
-
-@dataclass
-class GameState():
-    merchant_list: list[MerchantCard]
-    point_list: list[PointCard]
-    silver: int = 8
-    gold: int = 8
-
-    def compress(self):
-        """Length 79:\n
-        6 Merchant Cards, 9 length each (0-53)\n
-        5 Point Cards, 5 length each (54-78)"""
-        string = ''.join(mc.compress() for mc in self.merchant_list)
-        if len(self.merchant_list) < 6:
-            string += (6 - len(self.merchant_list))*COMPLENG_M*'0'
-        string += ''.join(pc.compress() for pc in self.point_list)
-        if len(self.point_list) < 5:
-            string += (5 - len(self.point_list))*COMPLENG_P*'0'
-        if len(string) != (COMPLENG_M*6 + COMPLENG_P*5):
-            raise ValueError(f"GameState compression is {len(string)} not expected {(COMPLENG_M*6 + COMPLENG_P*5)}")
-        return string
-
-@dataclass
-class Player():
-    caravan: Caravan
-    hand: list[MerchantCard]
-    score: int = 0
-    point_count: int = 0
-
-    def compress(self, hand_size = 4):
-        """Length default 40: 4 caravan + 9*hand_size (0-39)"""
-        string = str(hex(self.caravan.count(1)).split('x')[-1])
-        string+= str(hex(self.caravan.count(2)).split('x')[-1])
-        string+= str(hex(self.caravan.count(3)).split('x')[-1])
-        string+= str(hex(self.caravan.count(4)).split('x')[-1])
-        string+= ''.join(mc.compress() for mc in self.hand[:hand_size])
-        if len(self.hand) < hand_size:
-            string+= (hand_size - len(self.hand))*COMPLENG_M*'0'
-        return string
-    
-    @staticmethod
-    def starting_hand():
-        return [MerchantCard([],[5,5]), MerchantCard([],[1,1])]
-
-def str_hand(hand):
-    return "| " + " | ".join(map(str, hand)) + " |"
-
-def MCs_from_file(file):
-    import numpy as np
-    mc_list = []
-    a = np.genfromtxt(file, dtype = str, delimiter='->', autostrip = True)
-    for pair in a:
-        cost = [int(x) for x in pair[0].split()]
-        reward = [int(x) for x in pair[1].split()]
-        mc_list.append(MerchantCard( sorted(cost) , sorted(reward)) )
-    return mc_list
-
-def PCs_from_file(file):
-    import numpy as np
-    lst = []
-    a = np.genfromtxt(file, dtype = str, delimiter=',', autostrip = True)
-    for item in a:
-        worth = int(item[0])
-        cost = [int(c) for c in item[1].split()]
-        lst.append(PointCard( worth , sorted(cost) ))
-    return lst
-
-def stringify_cubes(spices):
-    return ' '.join([CUBE_STRING[x] for x in spices])

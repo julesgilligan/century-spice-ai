@@ -4,23 +4,23 @@
  ##____________##
 Box in UI to limit depth
 Report to UI the progress number
-Optimize for copy
-    -> change hand to store playble indices (reduces copy of cards)
 
  ##-----------------##
 ##  Wrapper details  ##
  ##_________________##
-paying for MCs isn't just counting yellows
 Don't show "replace __" without first adding to trades or points
 
  ##------##
 ##  MISC  ##
  ##______##
+Face off
 data structure for hands (playable only needs to be a bool list)
 tests for gen10
+use ML to do the heuristic based on points/turn
+shorten Path class, maybe by using llist?
 
  ##-------------##
 ##  AI specific  ##
  ##_____________##
+ paying for MCs isn't just counting yellows
 buy cards as early as possible
-use ML to do the heuristic based on points/turn

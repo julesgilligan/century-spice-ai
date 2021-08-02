@@ -1,9 +1,12 @@
 
-from century.source.SpiceAI import double_astar, DFS, forward_astar, game_search, run_gamestate
-import random
 import os
-from century.source.structures import Player, PointCard, GameState, MCs_from_file, MerchantCard, PCs_from_file
-from century.source.helpers import random_game
+import random
+
+from century.classes import GameState, MerchantCard, Player, PointCard
+from century.core.SpiceAI import (DFS, double_astar, forward_astar,
+                                  game_search, run_gamestate)
+from century.helpers.helpers import MCs_from_file, PCs_from_file, random_game
+
 
 def playground():
     curr_dir = os.path.dirname(__file__)
@@ -41,7 +44,9 @@ def simple_game():
 
 def drop_10_game():
     # Game that requires a lot of drop_10
-    pcl = [PointCard(15, [3,3,3,3,3]), PointCard(10, [1,1,4,4])]
+    # pcl = [PointCard(15, [3,3,3,3,3]), PointCard(10, [1,1,4,4])]
+    pcl = [ PointCard(10, [1,1,4,4])]
+    
     hand = [
         MerchantCard([],[1,3]),
         MerchantCard([3],[1,1,1,1,2]),
@@ -53,8 +58,8 @@ def drop_10_game():
     ]
     caravan = [1,1,1]
 
-    print(forward_astar(pcl, hand, caravan, max_depth=7))
-    print(DFS(pcl, hand, caravan, max_depth=7))
+    print(double_astar(pcl, hand, caravan, max_depth=7))
+    # print(DFS(pcl, hand, caravan, max_depth=7))
 
 def compare_three():
     with open('package/MerchantCards.txt') as f:
@@ -102,7 +107,25 @@ def prof():
     
 if __name__ == '__main__':
     try:
-        prof()
+        import signal
+
+        class TimeoutException(Exception):   # Custom exception class
+            pass
+        def timeout_handler(signum, frame):   # Custom signal handler
+            raise TimeoutException
+        # Change the behavior of SIGALRM
+        signal.signal(signal.SIGALRM, timeout_handler)
+        
+        # Start the timer. Once 5 seconds are over, a SIGALRM signal is sent.
+        signal.alarm(15)    
+        # This try/except loop ensures that 
+        #   you'll catch TimeoutException when it's sent.
+        try:
+            drop_10_game() # Whatever your function that might hang
+        except TimeoutException:
+            pass # continue the for loop if function A takes more than 5 second
+
+
     except (EOFError,KeyboardInterrupt) as e:
         print("\nGoodbye! Play again soon")
         exit(e)

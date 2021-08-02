@@ -9,9 +9,9 @@ from collections import Counter
 from itertools import combinations_with_replacement
 from queue import PriorityQueue
 
-from .path import Action, ActionType, Node, NodeMutable, Path
-from .structures import GameState, MerchantCard, Player, PointCard
-from .switch import Caravan, append_each, remove_each
+from century.classes import (Action, ActionType, GameState, MerchantCard, Node,
+                             NodeMutable, Path, Player, PointCard)
+from century.helpers.switch import Caravan, append_each, remove_each
 
 
 def run_game(PCs, hand, resources, MCs):

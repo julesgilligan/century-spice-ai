@@ -3,8 +3,8 @@ from enum import Enum
 
 from termcolor import colored
 
-from .switch import Caravan
-from .structures import MerchantCard, PointCard
+from century.helpers.switch import Caravan
+from century.classes.cards import MerchantCard, PointCard
 
 
 class ActionType(Enum):
