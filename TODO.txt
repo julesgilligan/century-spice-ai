@@ -1,26 +1,28 @@
 
- ##------------##
-##  OPTIMIZE!!  ##
- ##____________##
-Box in UI to limit depth
-Report to UI the progress number
+ ##----------##
+##  FACE OFF  ##
+ ##__________##
+understand the data (a* always winning)
+tweaks to DFS to bring it in the lead?
+integrate better Environment, Agent, GameState, Player
+Handle upgrade equivalents reliably
+
+ ##------##
+##  MISC  ##
+ ##______##
+data structure for hands (playable only needs to be a bool list)
+Plan how to include other info needed for actions (coins, cubes on cards, upgrades)
+shorten Path class, maybe by using llist?
+tests for gen10
+use ML to do the heuristic based on points/turn
 
  ##-----------------##
 ##  Wrapper details  ##
  ##_________________##
 Don't show "replace __" without first adding to trades or points
 
- ##------##
-##  MISC  ##
- ##______##
-Face off
-data structure for hands (playable only needs to be a bool list)
-tests for gen10
-use ML to do the heuristic based on points/turn
-shorten Path class, maybe by using llist?
-
  ##-------------##
 ##  AI specific  ##
  ##_____________##
- paying for MCs isn't just counting yellows
+paying for MCs isn't just counting yellows
 buy cards as early as possible
