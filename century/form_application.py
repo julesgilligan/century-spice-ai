@@ -5,7 +5,7 @@ import npyscreen
 from century.classes.app_forms import (BoxTitle_1t4, BoxTitleMultiSelect,
                                        ChangePoint, ChangeTrade, ReplacePoint,
                                        ReplaceTrade)
-from century.core import (Action, ActionType, GameState, MerchantCard, Path,
+from century.classes import (Action, ActionType, GameState, MerchantCard, Path,
                           Player, PointCard)
 from century.core.rules import RULES as R
 from century.core.SpiceAI import play_card, run_game
