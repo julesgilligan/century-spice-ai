@@ -1,6 +1,8 @@
-import re
 import random
-from century.source.structures import PointCard, MerchantCard, GameState, Player
+import re
+
+from century.classes import GameState, MerchantCard, Player, PointCard
+
 
 def read_point_card(card = None):
     ''' 'card' : a string to be parsed as a PointCard. 
@@ -58,3 +60,24 @@ def random_game(select_mcs, select_pcs, hand_size):
 def random_upgrade():
     effective_cards = [MerchantCard([1],[2]), MerchantCard([2],[3]), MerchantCard([3],[4])]
     return random.choice(effective_cards)
+
+
+def MCs_from_file(file):
+    import numpy as np
+    mc_list = []
+    a = np.genfromtxt(file, dtype = str, delimiter='->', autostrip = True)
+    for pair in a:
+        cost = [int(x) for x in pair[0].split()]
+        reward = [int(x) for x in pair[1].split()]
+        mc_list.append(MerchantCard( sorted(cost) , sorted(reward)) )
+    return mc_list
+
+def PCs_from_file(file):
+    import numpy as np
+    lst = []
+    a = np.genfromtxt(file, dtype = str, delimiter=',', autostrip = True)
+    for item in a:
+        worth = int(item[0])
+        cost = [int(c) for c in item[1].split()]
+        lst.append(PointCard( worth , sorted(cost) ))
+    return lst

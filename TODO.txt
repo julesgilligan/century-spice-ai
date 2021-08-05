@@ -1,26 +1,26 @@
 
-
  ##------------##
 ##  OPTIMIZE!!  ##
  ##____________##
 Box in UI to limit depth
 Report to UI the progress number
-Drop to 10 takes forever apparently
-Optimize for copy
-    -> change hand to store playble indices (reduces copy of cards)
-    ?? resources, cost, etc. as an extension of Counter or 4 element list [1s,2s,3s,4s]
 
  ##-----------------##
 ##  Wrapper details  ##
  ##_________________##
-Follow path cues replace merchant and point
-Follow path drops cubes
-Change cubes in main window
-paying for MCs isn't just counting yellows
+Don't show "replace __" without first adding to trades or points
 
+ ##------##
+##  MISC  ##
+ ##______##
+Face off
+data structure for hands (playable only needs to be a bool list)
+tests for gen10
+use ML to do the heuristic based on points/turn
+shorten Path class, maybe by using llist?
 
  ##-------------##
 ##  AI specific  ##
  ##_____________##
+ paying for MCs isn't just counting yellows
 buy cards as early as possible
-use ML to do the heuristic based on points/turn
